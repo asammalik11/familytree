@@ -20,11 +20,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script>
-    const R  = 30;
-    const CO = 52;  // offset from couple-centre to each circle's centre
-    const NS = 200; // horizontal spacing between node centres
+    // Layout sizes
+    const R  = 30;  // circle radius
+    const CO = 52;  // centre offset for each person in a couple
+    const NS = 200; // horizontal spacing between nodes
     const LH = 120; // vertical spacing between generations
 
+    // Colours
     const red  = '#dc2626';
     const grey = '#c9d0e3';
     const fg   = '#1a1d23';
@@ -103,13 +105,54 @@
         .each(function(d) { drawNode(d3.select(this), d); });
     }
 
+    // Converts the flat graph (nodes/couples/parentOf) into a nested tree for D3
+    function parseGraph(data) {
+      const nodeMap = Object.fromEntries(data.nodes.map(n => [n.id, n]));
+
+      // id → spouse id
+      const spouseOf = {};
+      data.couples.forEach(({ a, b }) => { spouseOf[a] = b; spouseOf[b] = a; });
+
+      // sorted couple key → [child ids]
+      const childrenOf = {};
+      data.parentOf.forEach(({ parents, child }) => {
+        const key = [...parents].sort().join('+');
+        (childrenOf[key] ??= []).push(child);
+      });
+
+      const isChild = new Set(data.parentOf.map(p => p.child));
+
+      // Root = not a child and not already claimed as someone's spouse
+      const claimed = new Set();
+      const roots = data.nodes.filter(n => {
+        if (isChild.has(n.id) || claimed.has(n.id)) return false;
+        if (spouseOf[n.id]) claimed.add(spouseOf[n.id]);
+        return true;
+      });
+
+      function buildNode(id) {
+        const spouseId = spouseOf[id];
+        const key = spouseId ? [id, spouseId].sort().join('+') : id;
+        return {
+          id,
+          name: nodeMap[id].name,
+          spouse: spouseId ? nodeMap[spouseId].name : null,
+          children: (childrenOf[key] ?? []).map(buildNode)
+        };
+      }
+
+      return roots.length === 1
+        ? buildNode(roots[0].id)
+        : { id: '__root__', name: null, children: roots.map(r => buildNode(r.id)) };
+    }
+
     const family = new URLSearchParams(location.search).get('family');
     fetch(`${family}.json`)
       .then(r => r.json())
       .then(data => {
         document.title = data.title;
         document.getElementById('page-title').textContent = data.title;
-        draw(data.root);
+        draw(parseGraph(data));
       });
   </script>
 

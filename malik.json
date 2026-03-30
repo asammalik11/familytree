@@ -1,13 +1,24 @@
 {
   "title": "Malik Family",
-  "root": {
-    "name": "Tanvir",
-    "spouse": "Riffat",
-    "children": [
-      { "name": "Saim",  "spouse": "Zainab" },
-      { "name": "Asam",  "spouse": "Afroz"  },
-      { "name": "Ammar" },
-      { "name": "Rida"  }
-    ]
-  }
+  "nodes": [
+    { "id": "tanvir", "name": "Tanvir" },
+    { "id": "riffat", "name": "Riffat" },
+    { "id": "saim",   "name": "Saim"   },
+    { "id": "zainab", "name": "Zainab" },
+    { "id": "asam",   "name": "Asam"   },
+    { "id": "afroz",  "name": "Afroz"  },
+    { "id": "ammar",  "name": "Ammar"  },
+    { "id": "rida",   "name": "Rida"   }
+  ],
+  "couples": [
+    { "a": "tanvir", "b": "riffat" },
+    { "a": "saim",   "b": "zainab" },
+    { "a": "asam",   "b": "afroz"  }
+  ],
+  "parentOf": [
+    { "parents": ["tanvir", "riffat"], "child": "saim"  },
+    { "parents": ["tanvir", "riffat"], "child": "asam"  },
+    { "parents": ["tanvir", "riffat"], "child": "ammar" },
+    { "parents": ["tanvir", "riffat"], "child": "rida"  }
+  ]
 }
