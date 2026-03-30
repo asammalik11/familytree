@@ -1,0 +1,13 @@
+{
+  "title": "Hasan Family",
+  "root": {
+    "name": "Shoaib",
+    "spouse": "Shama",
+    "children": [
+      { "name": "Saqib" },
+      { "name": "Nadia",  "spouse": "Fareed" },
+      { "name": "Saliha", "spouse": "Ahad"   },
+      { "name": "Afroz",  "spouse": "Asam"   }
+    ]
+  }
+}

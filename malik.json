@@ -1,0 +1,13 @@
+{
+  "title": "Malik Family",
+  "root": {
+    "name": "Tanvir",
+    "spouse": "Riffat",
+    "children": [
+      { "name": "Saim",  "spouse": "Zainab" },
+      { "name": "Asam",  "spouse": "Afroz"  },
+      { "name": "Ammar" },
+      { "name": "Rida"  }
+    ]
+  }
+}

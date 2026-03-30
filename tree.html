@@ -13,115 +13,84 @@
       <a class="back" href="index.html">← Home</a>
       <h1 id="page-title">Family Tree</h1>
     </header>
-
     <div class="tree-canvas">
       <div id="tree-root"></div>
     </div>
   </div>
 
   <script>
-    function getParam(name) {
-      return new URLSearchParams(window.location.search).get(name);
-    }
+    // ── Build DOM for one tree node ────────────────────────────
+    // Each node: { name, spouse?, children? }
+    //   spouse  → shown next to the node with a red marriage line
+    //   children → rendered below, connected with branch lines
+    function buildNode(node) {
+      const hasChildren = node.children && node.children.length > 0;
 
-    // Builds DOM for one node. A node is one of:
-    //   { name }                          — regular person
-    //   { couple: ["name1","name2"], ... } — married pair
-    //   { blank: true, ... }              — invisible placeholder root
-    function buildNode(person, isRoot = false) {
-      const hasChildren = person.children && person.children.length > 0;
+      const wrap = document.createElement('div');
+      wrap.className = 'tree-node' + (hasChildren ? ' has-children' : '');
 
-      const nodeEl = document.createElement('div');
-      nodeEl.className = 'tree-node' + (hasChildren ? ' has-children' : '');
+      const box = document.createElement('div');
+      box.className = 'node-box';
 
-      const boxEl = document.createElement('div');
-      boxEl.className = 'node-box';
-
-      if (person.blank) {
-        // Invisible spacer node — just draws the connector line downward
-        boxEl.classList.add('blank-box');
-
-      } else if (person.couple) {
-        // Husband ♥ Wife row
-        const pairEl = document.createElement('div');
-        pairEl.className = 'couple-pair';
+      if (node.spouse) {
+        // Married couple: two pills joined by a red line
+        const pair = document.createElement('div');
+        pair.className = 'couple-pair';
 
         const p1 = document.createElement('div');
         p1.className = 'node-label';
-        p1.textContent = person.couple[0];
+        p1.textContent = node.name;
 
-        const heart = document.createElement('div');
-        heart.className = 'heart';
-        heart.textContent = '♥';
+        const line = document.createElement('div');
+        line.className = 'marriage-line';
 
         const p2 = document.createElement('div');
         p2.className = 'node-label';
-        p2.textContent = person.couple[1];
+        p2.textContent = node.spouse;
 
-        pairEl.appendChild(p1);
-        pairEl.appendChild(heart);
-        pairEl.appendChild(p2);
-        boxEl.appendChild(pairEl);
-
+        pair.append(p1, line, p2);
+        box.appendChild(pair);
       } else {
-        // Regular person
-        const labelEl = document.createElement('div');
-        labelEl.className = 'node-label' + (isRoot ? ' root-label' : '');
-        labelEl.textContent = person.name;
-        boxEl.appendChild(labelEl);
+        const label = document.createElement('div');
+        label.className = 'node-label';
+        label.textContent = node.name;
+        box.appendChild(label);
       }
 
-      nodeEl.appendChild(boxEl);
+      wrap.appendChild(box);
 
-      // Recursively add children
+      // Recursively build children
       if (hasChildren) {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'children-row';
+        const row = document.createElement('div');
+        row.className = 'children-row';
 
-        person.children.forEach(child => {
-          const colEl = document.createElement('div');
-          colEl.className = 'child-col';
-          colEl.appendChild(buildNode(child));
-          rowEl.appendChild(colEl);
+        node.children.forEach(child => {
+          const col = document.createElement('div');
+          col.className = 'child-col';
+          col.appendChild(buildNode(child));
+          row.appendChild(col);
         });
 
-        nodeEl.appendChild(rowEl);
+        wrap.appendChild(row);
       }
 
-      return nodeEl;
+      return wrap;
     }
 
-    async function init() {
-      const familyKey = getParam('family');
-      const container = document.getElementById('tree-root');
+    // ── Load data and render ───────────────────────────────────
+    const family = new URLSearchParams(window.location.search).get('family');
 
-      if (!familyKey) {
-        container.innerHTML = '<p class="status-msg">No family selected.</p>';
-        return;
-      }
-
-      let data;
-      try {
-        const res = await fetch('data.json');
-        data = await res.json();
-      } catch {
-        container.innerHTML = '<p class="status-msg">Could not load data.json.</p>';
-        return;
-      }
-
-      const family = data[familyKey];
-      if (!family) {
-        container.innerHTML = '<p class="status-msg">Family not found.</p>';
-        return;
-      }
-
-      document.title = family.title;
-      document.getElementById('page-title').textContent = family.title;
-
-      container.appendChild(buildNode(family.root, true));
-    }
-
-    init();
+    fetch(`${family}.json`)
+      .then(r => r.json())
+      .then(data => {
+        document.title = data.title;
+        document.getElementById('page-title').textContent = data.title;
+        document.getElementById('tree-root').appendChild(buildNode(data.root));
+      })
+      .catch(() => {
+        document.getElementById('tree-root').innerHTML =
+          '<p class="status-msg">Could not load family data.</p>';
+      });
   </script>
 
 </body>
