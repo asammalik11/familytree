@@ -160,18 +160,20 @@ header a.back:hover { color: #3a58e0; }
   flex-shrink: 0;
 }
 
-/* Horizontal bar — each child draws its half of the bar */
+/* Horizontal bar — middle children span full width so there are no gaps.
+   First child starts at its own center. Last child ends at its own center. */
 .child-col::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 50%;
+  left: 0;
   right: 0;
   height: 2px;
   background: var(--line);
 }
 
-.child-col:last-child::after  { left: 0; right: 50%; }
+.child-col:first-child::after { left: 50%; }
+.child-col:last-child::after  { right: 50%; }
 .child-col:only-child::after  { display: none; }
 
 /* ── Node Box ─────────────────────────────────────────────── */
@@ -221,7 +223,7 @@ header a.back:hover { color: #3a58e0; }
 
 /* Red marriage line between the two pills */
 .marriage-line {
-  width: 28px;
+  width: 32px;
   background: var(--surface);
   border-top: 2px solid var(--node-border);
   border-bottom: 2px solid var(--node-border);
@@ -234,7 +236,7 @@ header a.back:hover { color: #3a58e0; }
   content: '';
   display: block;
   width: 100%;
-  height: 2px;
+  height: 3px;
   background: var(--marriage);
   border-radius: 2px;
 }
