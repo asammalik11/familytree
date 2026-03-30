@@ -43,19 +43,19 @@
     },
     {
       "id": "tahira",
-      "name": "tahira"
+      "name": "Tahira"
     },
     {
       "id": "sami",
-      "name": "sami"
+      "name": "Sami"
     },
     {
       "id": "ahmad",
-      "name": "ahmad"
+      "name": "Ahmad"
     },
     {
       "id": "tallat",
-      "name": "tallat"
+      "name": "Tallat"
     },
     {
       "id": "saim",
@@ -115,7 +115,7 @@
   "parentOf": [
     {
       "parents": ["fazal", "takhtbi"],
-      "children": ["tanvir", "nazir", "bubo1", "bubo2", "bubo3"]
+      "children": ["tanvir", "nazir", "rakhmat", "hashmat", "raham"]
     },
     {
       "parents": ["tassaduq", "parveen"],
