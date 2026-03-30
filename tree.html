@@ -13,82 +13,157 @@
       <a class="back" href="index.html">← Home</a>
       <h1 id="page-title">Family Tree</h1>
     </header>
-    <div class="tree-canvas">
-      <div id="tree-root"></div>
+    <div class="tree-canvas" id="canvas">
+      <svg id="tree-svg"></svg>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script>
-    // ── Build DOM for one tree node ────────────────────────────
-    // Each node: { name, spouse?, children? }
-    //   spouse  → shown next to the node with a red marriage line
-    //   children → rendered below, connected with branch lines
-    function buildNode(node) {
-      const hasChildren = node.children && node.children.length > 0;
+    // ── Node dimensions ────────────────────────────────────────
+    const PILL_W   = 100;   // width of each name pill
+    const PILL_H   = 40;    // height of each name pill
+    const PILL_R   = 20;    // corner radius (full pill shape)
+    const MARRY_W  = 28;    // width of the red marriage line segment
+    const NODE_SEP = 250;   // horizontal spacing between node centres
+    const LEVEL_H  = 110;   // vertical spacing between generations
+    const PAD      = 60;    // padding around the whole tree
 
-      const wrap = document.createElement('div');
-      wrap.className = 'tree-node' + (hasChildren ? ' has-children' : '');
+    // ── Colours (matching the site palette) ───────────────────
+    const CLR = {
+      surface:  '#ffffff',
+      border:   '#dde2f0',
+      line:     '#c9d0e3',
+      text:     '#1a1d23',
+      muted:    '#6b7280',
+      marriage: '#dc2626',
+    };
 
-      const box = document.createElement('div');
-      box.className = 'node-box';
+    // ── Render one node group ──────────────────────────────────
+    // Each D3 node sits at (0,0) relative to its <g> transform.
+    function renderNode(g, d) {
+      if (d.data.spouse) {
+        // Total couple width = PILL_W + MARRY_W + PILL_W
+        const half = (PILL_W + MARRY_W + PILL_W) / 2;
 
-      if (node.spouse) {
-        // Married couple: two pills joined by a red line
-        const pair = document.createElement('div');
-        pair.className = 'couple-pair';
+        // Left pill (the person who is the tree anchor)
+        pill(g, -half, d.data.name);
 
-        const p1 = document.createElement('div');
-        p1.className = 'node-label';
-        p1.textContent = node.name;
+        // Marriage line — red bar between the two pills
+        g.append('line')
+          .attr('x1', -MARRY_W / 2).attr('x2', MARRY_W / 2)
+          .attr('y1', 0)            .attr('y2', 0)
+          .attr('stroke', CLR.marriage)
+          .attr('stroke-width', 3)
+          .attr('stroke-linecap', 'round');
 
-        const line = document.createElement('div');
-        line.className = 'marriage-line';
-
-        const p2 = document.createElement('div');
-        p2.className = 'node-label';
-        p2.textContent = node.spouse;
-
-        pair.append(p1, line, p2);
-        box.appendChild(pair);
-      } else {
-        const label = document.createElement('div');
-        label.className = 'node-label';
-        label.textContent = node.name;
-        box.appendChild(label);
-      }
-
-      wrap.appendChild(box);
-
-      // Recursively build children
-      if (hasChildren) {
-        const row = document.createElement('div');
-        row.className = 'children-row';
-
-        node.children.forEach(child => {
-          const col = document.createElement('div');
-          col.className = 'child-col';
-          col.appendChild(buildNode(child));
-          row.appendChild(col);
+        // Top/bottom border strips to visually close the gap between pills
+        [-PILL_H / 2, PILL_H / 2].forEach(y => {
+          g.append('line')
+            .attr('x1', -MARRY_W / 2).attr('x2', MARRY_W / 2)
+            .attr('y1', y).attr('y2', y)
+            .attr('stroke', CLR.border).attr('stroke-width', 2);
         });
 
-        wrap.appendChild(row);
-      }
+        // Right pill (the spouse / in-law)
+        pill(g, MARRY_W / 2, d.data.spouse);
 
-      return wrap;
+      } else {
+        // Single person — centred pill
+        pill(g, -PILL_W / 2, d.data.name);
+      }
     }
 
-    // ── Load data and render ───────────────────────────────────
-    const family = new URLSearchParams(window.location.search).get('family');
+    // Helper: draw one pill starting at x (left edge)
+    function pill(g, x, name) {
+      g.append('rect')
+        .attr('x', x).attr('y', -PILL_H / 2)
+        .attr('width', PILL_W).attr('height', PILL_H)
+        .attr('rx', PILL_R)
+        .attr('fill', CLR.surface)
+        .attr('stroke', CLR.border)
+        .attr('stroke-width', 2)
+        .attr('filter', 'url(#shadow)');
+
+      g.append('text')
+        .attr('x', x + PILL_W / 2).attr('y', 0).attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .attr('fill', CLR.text)
+        .attr('font-size', 13)
+        .attr('font-weight', 600)
+        .attr('font-family', 'Segoe UI, system-ui, sans-serif')
+        .text(name);
+    }
+
+    // ── Orthogonal (elbow) connector path ──────────────────────
+    function elbowPath(d) {
+      const sy = d.source.y + PILL_H / 2;     // bottom of parent node
+      const ty = d.target.y - PILL_H / 2;     // top of child node
+      const my = (sy + ty) / 2;               // midpoint for the horizontal run
+      return `M${d.source.x},${sy} V${my} H${d.target.x} V${ty}`;
+    }
+
+    // ── Build and render the tree ──────────────────────────────
+    function drawTree(rootData) {
+      const root = d3.hierarchy(rootData, d => d.children?.length ? d.children : null);
+
+      d3.tree().nodeSize([NODE_SEP, LEVEL_H])(root);
+
+      // Bounding box of all node centres
+      let x0 = Infinity, x1 = -Infinity;
+      root.each(d => { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); });
+
+      const halfNode  = PILL_W + MARRY_W / 2;            // half-width of a couple node
+      const svgWidth  = x1 - x0 + halfNode * 2 + PAD * 2;
+      const svgHeight = (root.height + 1) * LEVEL_H + PAD * 2;
+      const vbX       = x0 - halfNode - PAD;
+      const vbY       = -PILL_H / 2 - PAD;
+
+      const svg = d3.select('#tree-svg')
+        .attr('width',   svgWidth)
+        .attr('height',  svgHeight)
+        .attr('viewBox', `${vbX} ${vbY} ${svgWidth} ${svgHeight}`);
+
+      // Drop-shadow filter
+      const defs = svg.append('defs');
+      const filter = defs.append('filter').attr('id', 'shadow').attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%');
+      filter.append('feDropShadow').attr('dx', 0).attr('dy', 2).attr('stdDeviation', 4).attr('flood-color', 'rgba(0,0,0,0.07)');
+
+      // Pan & zoom (drag or scroll to navigate)
+      const g = svg.append('g');
+      svg.call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform)));
+
+      // Connector lines (drawn first, so they sit behind nodes)
+      g.append('g')
+        .selectAll('path')
+        .data(root.links())
+        .join('path')
+        .attr('fill', 'none')
+        .attr('stroke', CLR.line)
+        .attr('stroke-width', 2)
+        .attr('d', elbowPath);
+
+      // Nodes
+      g.append('g')
+        .selectAll('g')
+        .data(root.descendants())
+        .join('g')
+        .attr('transform', d => `translate(${d.x},${d.y})`)
+        .each(function(d) { renderNode(d3.select(this), d); });
+    }
+
+    // ── Load data and go ───────────────────────────────────────
+    const family = new URLSearchParams(location.search).get('family');
 
     fetch(`${family}.json`)
       .then(r => r.json())
       .then(data => {
         document.title = data.title;
         document.getElementById('page-title').textContent = data.title;
-        document.getElementById('tree-root').appendChild(buildNode(data.root));
+        drawTree(data.root);
       })
       .catch(() => {
-        document.getElementById('tree-root').innerHTML =
+        document.getElementById('canvas').innerHTML =
           '<p class="status-msg">Could not load family data.</p>';
       });
   </script>

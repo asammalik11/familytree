@@ -2,16 +2,13 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:          #f7f8fa;
-  --surface:     #ffffff;
-  --primary:     #4f6ef7;
-  --text:        #1a1d23;
-  --muted:       #6b7280;
-  --line:        #c9d0e3;
-  --node-border: #dde2f0;
-  --marriage:    #dc2626;   /* red marriage line */
-  --shadow:      0 2px 10px rgba(0,0,0,.07);
-  --stem:        32px;
+  --bg:      #f7f8fa;
+  --surface: #ffffff;
+  --primary: #4f6ef7;
+  --text:    #1a1d23;
+  --muted:   #6b7280;
+  --border:  #dde2f0;
+  --shadow:  0 2px 10px rgba(0,0,0,.07);
 }
 
 body {
@@ -110,136 +107,13 @@ header a.back:hover { color: #3a58e0; }
 
 .tree-canvas {
   flex: 1;
-  overflow: auto;
-  padding: 52px 40px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  overflow: hidden;   /* D3 zoom/pan handles navigation */
+  cursor: grab;
 }
 
-/* ── Tree Node ────────────────────────────────────────────── */
-.tree-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+.tree-canvas:active { cursor: grabbing; }
 
-/* Vertical stem going down from this node to its children row */
-.tree-node.has-children > .node-box::after {
-  content: '';
-  display: block;
-  width: 2px;
-  height: var(--stem);
-  background: var(--line);
-  margin: 0 auto;
-}
-
-/* ── Children Row ─────────────────────────────────────────── */
-.children-row {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: center;
-}
-
-.child-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 20px;
-  position: relative;
-}
-
-/* Vertical stem from horizontal bar down to child */
-.child-col::before {
-  content: '';
-  display: block;
-  width: 2px;
-  height: var(--stem);
-  background: var(--line);
-  flex-shrink: 0;
-}
-
-/* Horizontal bar — middle children span full width so there are no gaps.
-   First child starts at its own center. Last child ends at its own center. */
-.child-col::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--line);
-}
-
-.child-col:first-child::after { left: 50%; }
-.child-col:last-child::after  { right: 50%; }
-.child-col:only-child::after  { display: none; }
-
-/* ── Node Box ─────────────────────────────────────────────── */
-.node-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* ── Single Person Pill ───────────────────────────────────── */
-.node-label {
-  background: var(--surface);
-  border: 2px solid var(--node-border);
-  border-radius: 999px;
-  padding: 10px 22px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: var(--shadow);
-  transition: border-color .15s, box-shadow .15s;
-  cursor: default;
-  user-select: none;
-}
-
-.node-label:hover {
-  border-color: var(--primary);
-  box-shadow: 0 4px 16px rgba(79,110,247,.18);
-}
-
-/* ── Couple Pair ──────────────────────────────────────────── */
-.couple-pair {
-  display: flex;
-  align-items: stretch;
-}
-
-/* Left pill: open on the right side */
-.couple-pair .node-label:first-child {
-  border-radius: 999px 0 0 999px;
-  border-right: none;
-}
-
-/* Right pill: open on the left side */
-.couple-pair .node-label:last-child {
-  border-radius: 0 999px 999px 0;
-  border-left: none;
-}
-
-/* Red marriage line between the two pills */
-.marriage-line {
-  width: 32px;
-  background: var(--surface);
-  border-top: 2px solid var(--node-border);
-  border-bottom: 2px solid var(--node-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.marriage-line::after {
-  content: '';
-  display: block;
-  width: 100%;
-  height: 3px;
-  background: var(--marriage);
-  border-radius: 2px;
-}
+#tree-svg { display: block; width: 100%; height: 100%; }
 
 /* ── Status ───────────────────────────────────────────────── */
 .status-msg {
