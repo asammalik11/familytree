@@ -245,17 +245,17 @@
         const node = buildNode(r.id);
         if (node) {
           rootNodes.push(node);
-          // If this root has no children in the tree but should have,
-          // it means its child was already built via the other lineage.
-          // Create a merge link from this root to the child's circle.
-          if (!node.children) {
-            const spouseId = spouseOf[r.id];
-            const key = spouseId ? [r.id, spouseId].sort().join('+') : r.id;
-            const childIds = childrenOf[key] ?? [];
-            childIds.forEach(cid => {
+          // Check if any expected children were already built via the other lineage.
+          // Create merge links for those skipped children.
+          const spouseId = spouseOf[r.id];
+          const key = spouseId ? [r.id, spouseId].sort().join('+') : r.id;
+          const expectedChildren = childrenOf[key] ?? [];
+          const actualChildren = new Set((node.children ?? []).map(c => c.id));
+          expectedChildren.forEach(cid => {
+            if (!actualChildren.has(cid)) {
               mergeLinks.push({ sourceId: r.id, targetPersonId: cid });
-            });
-          }
+            }
+          });
         }
       });
 
