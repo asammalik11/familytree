@@ -58,32 +58,8 @@
   ],
   "parentOf": [
     {
-      "parents": [
-        "shoaib",
-        "shama"
-      ],
-      "child": "saqib"
-    },
-    {
-      "parents": [
-        "shoaib",
-        "shama"
-      ],
-      "child": "nadia"
-    },
-    {
-      "parents": [
-        "shoaib",
-        "shama"
-      ],
-      "child": "saliha"
-    },
-    {
-      "parents": [
-        "shoaib",
-        "shama"
-      ],
-      "child": "afroz"
+      "parents": ["shoaib", "shama"],
+      "children": ["saqib", "nadia", "saliha", "afroz"]
     }
   ]
 }

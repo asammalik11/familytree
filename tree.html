@@ -168,13 +168,13 @@
 
       // sorted couple key → [child ids]
       const childrenOf = {};
-      data.parentOf.forEach(({ parents, child }) => {
+      data.parentOf.forEach(({ parents, children }) => {
         const key = [...parents].sort().join('+');
-        (childrenOf[key] ??= []).push(child);
+        (childrenOf[key] ??= []).push(...children);
       });
 
       // Track who is a child (has parents)
-      const isChild = new Set(data.parentOf.map(p => p.child));
+      const isChild = new Set(data.parentOf.flatMap(p => p.children));
 
       // Identify couples where both members have parents (merge points)
       // In such cases, the spouse's lineage is shown separately, not inlined

@@ -10,20 +10,52 @@
       "name": "Manji"
     },
     {
-      "id": "nanaabu",
-      "name": "Nana Abu"
+      "id": "tassaduq",
+      "name": "Tassaduq"
     },
     {
-      "id": "nano",
-      "name": "Nano"
+      "id": "parveen",
+      "name": "Parveen"
     },
     {
       "id": "tanvir",
       "name": "Tanvir"
     },
     {
+      "id": "nazir",
+      "name": "Nazir"
+    },
+    {
+      "id": "bubo1",
+      "name": "Bubo1"
+    },
+    {
+      "id": "bubo2",
+      "name": "Bubo2"
+    },
+    {
+      "id": "bubo3",
+      "name": "Bubo3"
+    },
+    {
       "id": "riffat",
       "name": "Riffat"
+    },
+    {
+      "id": "tahira",
+      "name": "tahira"
+    },
+    {
+      "id": "sami",
+      "name": "sami"
+    },
+    {
+      "id": "ahmad",
+      "name": "ahmad"
+    },
+    {
+      "id": "tallat",
+      "name": "tallat"
     },
     {
       "id": "saim",
@@ -74,46 +106,16 @@
   ],
   "parentOf": [
     {
-      "parents": [
-        "dadaabu",
-        "manji"
-      ],
-      "child": "tanvir"
+      "parents": ["dadaabu", "manji"],
+      "children": ["tanvir", "nazir", "bubo1", "bubo2", "bubo3"]
     },
     {
-      "parents": [
-        "nanaabu",
-        "nano"
-      ],
-      "child": "riffat"
+      "parents": ["tassaduq", "parveen"],
+      "children": ["riffat", "tahira", "tallat", "sami", "ahmad"]
     },
     {
-      "parents": [
-        "tanvir",
-        "riffat"
-      ],
-      "child": "saim"
-    },
-    {
-      "parents": [
-        "tanvir",
-        "riffat"
-      ],
-      "child": "asam"
-    },
-    {
-      "parents": [
-        "tanvir",
-        "riffat"
-      ],
-      "child": "ammar"
-    },
-    {
-      "parents": [
-        "tanvir",
-        "riffat"
-      ],
-      "child": "rida"
+      "parents": ["tanvir", "riffat"],
+      "children": ["saim", "asam", "ammar", "rida"]
     }
   ]
 }
