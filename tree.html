@@ -167,6 +167,7 @@
       });
 
       // Draw merge links (spouse's parents → spouse circle in the couple node)
+      // Route at 70% down (not 50%) so they don't overlap comb bars, and dash them
       mergeLinks.forEach(ml => {
         const source = nodePositions[ml.sourceId];
         const target = nodePositions[ml.targetPersonId];
@@ -180,9 +181,10 @@
         else if (target.data.spouse) tx -= CO;
         const ty = target.y - R;
 
-        const my = (sy + ty) / 2;
+        const my = sy + (ty - sy) * 0.7;
         g.append('path')
           .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2)
+          .attr('stroke-dasharray', '6,4')
           .attr('d', `M${sx},${sy} V${my} H${tx} V${ty}`);
       });
 
