@@ -20,151 +20,96 @@
 
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script>
-    // ── Node dimensions ────────────────────────────────────────
-    const PILL_W   = 100;   // width of each name pill
-    const PILL_H   = 40;    // height of each name pill
-    const PILL_R   = 20;    // corner radius (full pill shape)
-    const MARRY_W  = 28;    // width of the red marriage line segment
-    const NODE_SEP = 250;   // horizontal spacing between node centres
-    const LEVEL_H  = 110;   // vertical spacing between generations
-    const PAD      = 60;    // padding around the whole tree
+    const R  = 30;
+    const CO = 52;  // offset from couple-centre to each circle's centre
+    const NS = 200; // horizontal spacing between node centres
+    const LH = 120; // vertical spacing between generations
 
-    // ── Colours (matching the site palette) ───────────────────
-    const CLR = {
-      surface:  '#ffffff',
-      border:   '#dde2f0',
-      line:     '#c9d0e3',
-      text:     '#1a1d23',
-      muted:    '#6b7280',
-      marriage: '#dc2626',
-    };
+    const red  = '#dc2626';
+    const grey = '#c9d0e3';
+    const fg   = '#1a1d23';
+    const bg   = '#ffffff';
+    const bd   = '#dde2f0';
 
-    // ── Render one node group ──────────────────────────────────
-    // Each D3 node sits at (0,0) relative to its <g> transform.
-    function renderNode(g, d) {
-      if (d.data.spouse) {
-        // Total couple width = PILL_W + MARRY_W + PILL_W
-        const half = (PILL_W + MARRY_W + PILL_W) / 2;
-
-        // Left pill (the person who is the tree anchor)
-        pill(g, -half, d.data.name);
-
-        // Marriage line — red bar between the two pills
-        g.append('line')
-          .attr('x1', -MARRY_W / 2).attr('x2', MARRY_W / 2)
-          .attr('y1', 0)            .attr('y2', 0)
-          .attr('stroke', CLR.marriage)
-          .attr('stroke-width', 3)
-          .attr('stroke-linecap', 'round');
-
-        // Top/bottom border strips to visually close the gap between pills
-        [-PILL_H / 2, PILL_H / 2].forEach(y => {
-          g.append('line')
-            .attr('x1', -MARRY_W / 2).attr('x2', MARRY_W / 2)
-            .attr('y1', y).attr('y2', y)
-            .attr('stroke', CLR.border).attr('stroke-width', 2);
-        });
-
-        // Right pill (the spouse / in-law)
-        pill(g, MARRY_W / 2, d.data.spouse);
-
-      } else {
-        // Single person — centred pill
-        pill(g, -PILL_W / 2, d.data.name);
-      }
-    }
-
-    // Helper: draw one pill starting at x (left edge)
-    function pill(g, x, name) {
-      g.append('rect')
-        .attr('x', x).attr('y', -PILL_H / 2)
-        .attr('width', PILL_W).attr('height', PILL_H)
-        .attr('rx', PILL_R)
-        .attr('fill', CLR.surface)
-        .attr('stroke', CLR.border)
-        .attr('stroke-width', 2)
+    function drawCircle(g, cx, name) {
+      g.append('circle')
+        .attr('cx', cx).attr('cy', 0).attr('r', R)
+        .attr('fill', bg).attr('stroke', bd).attr('stroke-width', 2)
         .attr('filter', 'url(#shadow)');
-
       g.append('text')
-        .attr('x', x + PILL_W / 2).attr('y', 0).attr('dy', '0.35em')
+        .attr('x', cx).attr('y', 0).attr('dy', '0.35em')
         .attr('text-anchor', 'middle')
-        .attr('fill', CLR.text)
-        .attr('font-size', 13)
-        .attr('font-weight', 600)
+        .attr('fill', fg).attr('font-size', 12).attr('font-weight', 600)
         .attr('font-family', 'Segoe UI, system-ui, sans-serif')
         .text(name);
     }
 
-    // ── Orthogonal (elbow) connector path ──────────────────────
-    function elbowPath(d) {
-      const sy = d.source.y + PILL_H / 2;     // bottom of parent node
-      const ty = d.target.y - PILL_H / 2;     // top of child node
-      const my = (sy + ty) / 2;               // midpoint for the horizontal run
+    function drawNode(g, d) {
+      if (d.data.spouse) {
+        drawCircle(g, -CO, d.data.name);
+        drawCircle(g,  CO, d.data.spouse);
+        g.append('line')
+          .attr('x1', -CO + R).attr('x2', -9)
+          .attr('y1', 0).attr('y2', 0)
+          .attr('stroke', red).attr('stroke-width', 2);
+        g.append('line')
+          .attr('x1', 9).attr('x2', CO - R)
+          .attr('y1', 0).attr('y2', 0)
+          .attr('stroke', red).attr('stroke-width', 2);
+        g.append('text')
+          .attr('x', 0).attr('y', 0).attr('dy', '0.38em')
+          .attr('text-anchor', 'middle')
+          .attr('fill', red).attr('font-size', 14)
+          .text('♥');
+      } else {
+        drawCircle(g, 0, d.data.name);
+      }
+    }
+
+    function linkPath(d) {
+      const sy = d.source.y + R;
+      const ty = d.target.y - R;
+      const my = (sy + ty) / 2;
       return `M${d.source.x},${sy} V${my} H${d.target.x} V${ty}`;
     }
 
-    // ── Build and render the tree ──────────────────────────────
-    function drawTree(rootData) {
+    function draw(rootData) {
       const root = d3.hierarchy(rootData, d => d.children?.length ? d.children : null);
+      d3.tree().nodeSize([NS, LH])(root);
 
-      d3.tree().nodeSize([NODE_SEP, LEVEL_H])(root);
-
-      // Bounding box of all node centres
       let x0 = Infinity, x1 = -Infinity;
       root.each(d => { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); });
 
-      const halfNode  = PILL_W + MARRY_W / 2;            // half-width of a couple node
-      const svgWidth  = x1 - x0 + halfNode * 2 + PAD * 2;
-      const svgHeight = (root.height + 1) * LEVEL_H + PAD * 2;
-      const vbX       = x0 - halfNode - PAD;
-      const vbY       = -PILL_H / 2 - PAD;
+      const pad = 80;
+      const W = x1 - x0 + (CO + R) * 2 + pad * 2;
+      const H = (root.height + 1) * LH + pad * 2;
+      const vx = x0 - CO - R - pad;
+      const vy = -R - pad;
 
-      const svg = d3.select('#tree-svg')
-        .attr('width',   svgWidth)
-        .attr('height',  svgHeight)
-        .attr('viewBox', `${vbX} ${vbY} ${svgWidth} ${svgHeight}`);
+      const svg = d3.select('#tree-svg').attr('width', W).attr('height', H).attr('viewBox', `${vx} ${vy} ${W} ${H}`);
 
-      // Drop-shadow filter
       const defs = svg.append('defs');
-      const filter = defs.append('filter').attr('id', 'shadow').attr('x', '-20%').attr('y', '-20%').attr('width', '140%').attr('height', '140%');
-      filter.append('feDropShadow').attr('dx', 0).attr('dy', 2).attr('stdDeviation', 4).attr('flood-color', 'rgba(0,0,0,0.07)');
+      const f = defs.append('filter').attr('id', 'shadow').attr('x', '-30%').attr('y', '-30%').attr('width', '160%').attr('height', '160%');
+      f.append('feDropShadow').attr('dx', 0).attr('dy', 2).attr('stdDeviation', 3).attr('flood-color', 'rgba(0,0,0,0.08)');
 
-      // Pan & zoom (drag or scroll to navigate)
       const g = svg.append('g');
       svg.call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform)));
 
-      // Connector lines (drawn first, so they sit behind nodes)
-      g.append('g')
-        .selectAll('path')
-        .data(root.links())
-        .join('path')
-        .attr('fill', 'none')
-        .attr('stroke', CLR.line)
-        .attr('stroke-width', 2)
-        .attr('d', elbowPath);
+      g.append('g').selectAll('path').data(root.links()).join('path')
+        .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2).attr('d', linkPath);
 
-      // Nodes
-      g.append('g')
-        .selectAll('g')
-        .data(root.descendants())
-        .join('g')
+      g.append('g').selectAll('g').data(root.descendants()).join('g')
         .attr('transform', d => `translate(${d.x},${d.y})`)
-        .each(function(d) { renderNode(d3.select(this), d); });
+        .each(function(d) { drawNode(d3.select(this), d); });
     }
 
-    // ── Load data and go ───────────────────────────────────────
     const family = new URLSearchParams(location.search).get('family');
-
     fetch(`${family}.json`)
       .then(r => r.json())
       .then(data => {
         document.title = data.title;
         document.getElementById('page-title').textContent = data.title;
-        drawTree(data.root);
-      })
-      .catch(() => {
-        document.getElementById('canvas').innerHTML =
-          '<p class="status-msg">Could not load family data.</p>';
+        draw(data.root);
       });
   </script>
 
