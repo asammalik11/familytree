@@ -1,26 +1,89 @@
 {
   "title": "Hasan Family",
   "nodes": [
-    { "id": "shoaib", "name": "Shoaib" },
-    { "id": "shama",  "name": "Shama"  },
-    { "id": "saqib",  "name": "Saqib"  },
-    { "id": "nadia",  "name": "Nadia"  },
-    { "id": "fareed", "name": "Fareed" },
-    { "id": "saliha", "name": "Saliha" },
-    { "id": "ahad",   "name": "Ahad"   },
-    { "id": "afroz",  "name": "Afroz"  },
-    { "id": "asam",   "name": "Asam"   }
+    {
+      "id": "shoaib",
+      "name": "Shoaib"
+    },
+    {
+      "id": "shama",
+      "name": "Shama"
+    },
+    {
+      "id": "saqib",
+      "name": "Saqib"
+    },
+    {
+      "id": "nadia",
+      "name": "Nadia"
+    },
+    {
+      "id": "fareed",
+      "name": "Fareed"
+    },
+    {
+      "id": "saliha",
+      "name": "Saliha"
+    },
+    {
+      "id": "ahad",
+      "name": "Ahad"
+    },
+    {
+      "id": "afroz",
+      "name": "Afroz"
+    },
+    {
+      "id": "asam",
+      "name": "Asam"
+    }
   ],
   "couples": [
-    { "a": "shoaib", "b": "shama"  },
-    { "a": "nadia",  "b": "fareed" },
-    { "a": "saliha", "b": "ahad"   },
-    { "a": "afroz",  "b": "asam"   }
+    {
+      "a": "shoaib",
+      "b": "shama"
+    },
+    {
+      "a": "nadia",
+      "b": "fareed"
+    },
+    {
+      "a": "saliha",
+      "b": "ahad"
+    },
+    {
+      "a": "afroz",
+      "b": "asam"
+    }
   ],
   "parentOf": [
-    { "parents": ["shoaib", "shama"], "child": "saqib"  },
-    { "parents": ["shoaib", "shama"], "child": "nadia"  },
-    { "parents": ["shoaib", "shama"], "child": "saliha" },
-    { "parents": ["shoaib", "shama"], "child": "afroz"  }
+    {
+      "parents": [
+        "shoaib",
+        "shama"
+      ],
+      "child": "saqib"
+    },
+    {
+      "parents": [
+        "shoaib",
+        "shama"
+      ],
+      "child": "nadia"
+    },
+    {
+      "parents": [
+        "shoaib",
+        "shama"
+      ],
+      "child": "saliha"
+    },
+    {
+      "parents": [
+        "shoaib",
+        "shama"
+      ],
+      "child": "afroz"
+    }
   ]
 }
