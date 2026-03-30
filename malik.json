@@ -2,12 +2,12 @@
   "title": "Malik Family",
   "nodes": [
     {
-      "id": "dadaabu",
-      "name": "Dada Abu"
+      "id": "fazal",
+      "name": "Fazal"
     },
     {
-      "id": "manji",
-      "name": "Manji"
+      "id": "takhtbi",
+      "name": "Takht Bi"
     },
     {
       "id": "tassaduq",
@@ -26,16 +26,16 @@
       "name": "Nazir"
     },
     {
-      "id": "bubo1",
-      "name": "Bubo1"
+      "id": "rakhmat",
+      "name": "Rakhmat"
     },
     {
-      "id": "bubo2",
-      "name": "Bubo2"
+      "id": "hashmat",
+      "name": "Hashmat"
     },
     {
-      "id": "bubo3",
-      "name": "Bubo3"
+      "id": "raham",
+      "name": "Raham"
     },
     {
       "id": "riffat",
@@ -92,8 +92,8 @@
   ],
   "couples": [
     {
-      "a": "dadaabu",
-      "b": "manji"
+      "a": "fazal",
+      "b": "takhtbi"
     },
     {
       "a": "tassaduq",
@@ -114,7 +114,7 @@
   ],
   "parentOf": [
     {
-      "parents": ["dadaabu", "manji"],
+      "parents": ["fazal", "takhtbi"],
       "children": ["tanvir", "nazir", "bubo1", "bubo2", "bubo3"]
     },
     {
