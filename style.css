@@ -1,0 +1,255 @@
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #f7f8fa;
+  --surface:     #ffffff;
+  --primary:     #4f6ef7;
+  --primary-h:   #3a58e0;
+  --text:        #1a1d23;
+  --muted:       #6b7280;
+  --line:        #c9d0e3;
+  --node-border: #dde2f0;
+  --heart:       #e05c7a;
+  --radius:      12px;
+  --shadow:      0 2px 12px rgba(0,0,0,.08);
+  --gap:         28px;   /* length of vertical connector lines */
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Shared Header ────────────────────────────────────────── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--node-border);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+header h1 { font-size: 1.25rem; font-weight: 700; }
+
+header a.back {
+  text-decoration: none;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+header a.back:hover { color: var(--primary-h); }
+
+/* ── Home Page ────────────────────────────────────────────── */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 48px;
+  padding: 40px 20px;
+}
+
+.home-page .hero h1 {
+  font-size: 2.4rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+
+.home-page .hero p {
+  color: var(--muted);
+  text-align: center;
+  margin-top: 10px;
+  font-size: 1.05rem;
+}
+
+.family-cards {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.family-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--node-border);
+  border-radius: var(--radius);
+  padding: 36px 48px;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--text);
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+  min-width: 200px;
+}
+
+.family-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgba(0,0,0,.12);
+  border-color: var(--primary);
+}
+
+.family-card .icon  { font-size: 2.6rem; }
+.family-card .label { font-size: 1.2rem; font-weight: 700; }
+.family-card .sub   { font-size: 0.85rem; color: var(--muted); }
+
+/* ── Tree Page ────────────────────────────────────────────── */
+.tree-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.tree-canvas {
+  flex: 1;
+  overflow: auto;
+  padding: 48px 32px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ── Tree Node ────────────────────────────────────────────── */
+.tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Vertical line going down from a node that has children */
+.tree-node.has-children > .node-box::after {
+  content: '';
+  display: block;
+  width: 2px;
+  height: var(--gap);
+  background: var(--line);
+  margin: 0 auto;
+}
+
+/* ── Children Row ─────────────────────────────────────────── */
+.children-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* Each child column */
+.child-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  position: relative;
+}
+
+/* Vertical line: from the horizontal bar down to the child node */
+.child-col::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: var(--gap);
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+/* Horizontal bar: each child draws its half, forming a connected line.
+   ::after covers from the child's center to the right edge of its column. */
+.child-col::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  right: 0;
+  height: 2px;
+  background: var(--line);
+}
+
+/* Last child: line goes from left edge to center only */
+.child-col:last-child::after {
+  left: 0;
+  right: 50%;
+}
+
+/* Only child: no horizontal line needed */
+.child-col:only-child::after {
+  display: none;
+}
+
+/* ── Node Box ─────────────────────────────────────────────── */
+.node-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Blank invisible root — still draws the downward connector line */
+.blank-box {
+  min-width: 2px;
+  min-height: 0;
+}
+
+/* ── Regular Name Pill ────────────────────────────────────── */
+.node-label {
+  background: var(--surface);
+  border: 2px solid var(--node-border);
+  border-radius: 50px;
+  padding: 10px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  transition: border-color .15s, box-shadow .15s;
+  cursor: default;
+}
+
+.node-label:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 16px rgba(79,110,247,.15);
+}
+
+/* ── Couple Pair ──────────────────────────────────────────── */
+.couple-pair {
+  display: flex;
+  align-items: center;
+}
+
+/* Connect the two pills seamlessly around the heart */
+.couple-pair .node-label:first-child {
+  border-radius: 50px 0 0 50px;
+  border-right: none;
+}
+
+.couple-pair .node-label:last-child {
+  border-radius: 0 50px 50px 0;
+  border-left: none;
+}
+
+.heart {
+  background: var(--surface);
+  border-top: 2px solid var(--node-border);
+  border-bottom: 2px solid var(--node-border);
+  padding: 10px 10px;
+  color: var(--heart);
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+/* ── Status ───────────────────────────────────────────────── */
+.status-msg {
+  color: var(--muted);
+  font-size: 1rem;
+  padding: 60px;
+  text-align: center;
+}
