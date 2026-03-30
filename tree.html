@@ -68,22 +68,15 @@
       }
     }
 
-    function linkPath(d) {
-      const sy = d.source.y + R;
-      const ty = d.target.y - R;
-      const my = (sy + ty) / 2;
-      // Adjust target X if we need to connect to a specific person in a couple
-      let tx = d.target.x;
-      if (d.target.data.spouse && d.connectToPrimary) {
-        tx = d.target.x - CO; // Connect to primary (left circle)
-      }
-      return `M${d.source.x},${sy} V${my} H${tx} V${ty}`;
+    function childX(d) {
+      if (d.data.spouse && d.data.spouseHasOwnParents) return d.x - CO;
+      return d.x;
     }
 
     function draw(treeData, mergeLinks = []) {
       // If multiple roots, layout each independently and place side by side
       const roots = treeData.id === '__root__' ? treeData.children : [treeData];
-      const layouts = [];  // { root, nodes, links, x0, x1, y0, y1, offsetX }
+      const layouts = [];
       let cursor = 0;
       const GAP = 100;
 
@@ -91,30 +84,19 @@
         const root = d3.hierarchy(rd, d => d.children?.length ? d.children : null);
         d3.tree().nodeSize([NS, LH])(root);
 
-        let lx0 = Infinity, lx1 = -Infinity, ly0 = Infinity, ly1 = -Infinity;
-        root.each(d => {
-          lx0 = Math.min(lx0, d.x); lx1 = Math.max(lx1, d.x);
-          ly0 = Math.min(ly0, d.y); ly1 = Math.max(ly1, d.y);
-        });
+        let lx0 = Infinity, lx1 = -Infinity;
+        root.each(d => { lx0 = Math.min(lx0, d.x); lx1 = Math.max(lx1, d.x); });
 
-        // Shift this subtree so its left edge starts at cursor
         const offsetX = cursor - lx0;
         root.each(d => { d.x += offsetX; });
         cursor += (lx1 - lx0) + NS + GAP;
 
-        const links = root.links().map(link => {
-          const l = { ...link };
-          if (link.target.data.spouseHasOwnParents) l.connectToPrimary = true;
-          return l;
-        });
-
-        layouts.push({ root, links });
+        layouts.push({ root });
       });
 
-      // Build node positions map across all layouts
+      // Collect all nodes
       const nodePositions = {};
       const allNodes = [];
-      const allLinks = [];
       layouts.forEach(l => {
         l.root.each(d => {
           nodePositions[d.data.id] = { x: d.x, y: d.y, data: d.data };
@@ -123,7 +105,6 @@
           }
           allNodes.push(d);
         });
-        allLinks.push(...l.links);
       });
 
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
@@ -131,12 +112,6 @@
         x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x);
         y0 = Math.min(y0, d.y); y1 = Math.max(y1, d.y);
       });
-
-      const pad = 80;
-      const W = x1 - x0 + (CO + R) * 2 + pad * 2;
-      const H = y1 - y0 + R * 2 + pad * 2;
-      const vx = x0 - CO - R - pad;
-      const vy = y0 - R - pad;
 
       const svg = d3.select('#tree-svg');
 
@@ -146,7 +121,6 @@
 
       const g = svg.append('g');
 
-      // Center the tree in the viewport at 1:1 scale
       const svgEl = svg.node();
       const vw = svgEl.clientWidth || window.innerWidth;
       const vh = svgEl.clientHeight || window.innerHeight;
@@ -157,8 +131,40 @@
       const zoom = d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform));
       svg.call(zoom).call(zoom.transform, initTransform);
 
-      g.append('g').selectAll('path').data(allLinks).join('path')
-        .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2).attr('d', linkPath);
+      // Draw comb-style connectors: parent → vertical → horizontal bar → vertical drops
+      const linkG = g.append('g');
+      allNodes.forEach(parent => {
+        if (!parent.children || parent.children.length === 0) return;
+        const sy = parent.y + R;
+        const ty = parent.children[0].y - R;
+        const my = (sy + ty) / 2;
+
+        // Vertical from parent center down to midpoint
+        linkG.append('line')
+          .attr('x1', parent.x).attr('x2', parent.x)
+          .attr('y1', sy).attr('y2', my)
+          .attr('stroke', grey).attr('stroke-width', 2);
+
+        // Get child X positions (adjusted for couple primary side)
+        const cxs = parent.children.map(c => childX(c));
+        const minCx = Math.min(...cxs);
+        const maxCx = Math.max(...cxs);
+
+        // Horizontal bar spanning children
+        linkG.append('line')
+          .attr('x1', minCx).attr('x2', maxCx)
+          .attr('y1', my).attr('y2', my)
+          .attr('stroke', grey).attr('stroke-width', 2);
+
+        // Vertical drops to each child
+        parent.children.forEach(c => {
+          const cxx = childX(c);
+          linkG.append('line')
+            .attr('x1', cxx).attr('x2', cxx)
+            .attr('y1', my).attr('y2', ty)
+            .attr('stroke', grey).attr('stroke-width', 2);
+        });
+      });
 
       // Draw merge links (spouse's parents → spouse circle in the couple node)
       mergeLinks.forEach(ml => {
