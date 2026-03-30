@@ -80,28 +80,56 @@
       return `M${d.source.x},${sy} V${my} H${tx} V${ty}`;
     }
 
-    function draw(rootData, mergeLinks = []) {
-      const root = d3.hierarchy(rootData, d => d.children?.length ? d.children : null);
-      d3.tree().nodeSize([NS, LH])(root);
+    function draw(treeData, mergeLinks = []) {
+      // If multiple roots, layout each independently and place side by side
+      const roots = treeData.id === '__root__' ? treeData.children : [treeData];
+      const layouts = [];  // { root, nodes, links, x0, x1, y0, y1, offsetX }
+      let cursor = 0;
+      const GAP = 100;
 
-      // Build a map of node id to its position for merge links
-      const nodePositions = {};
-      root.each(d => { 
-        nodePositions[d.data.id] = { x: d.x, y: d.y, data: d.data };
-        if (d.data.spouseId) {
-          nodePositions[d.data.spouseId] = { x: d.x, y: d.y, data: d.data, isSpouse: true };
-        }
+      roots.forEach(rd => {
+        const root = d3.hierarchy(rd, d => d.children?.length ? d.children : null);
+        d3.tree().nodeSize([NS, LH])(root);
+
+        let lx0 = Infinity, lx1 = -Infinity, ly0 = Infinity, ly1 = -Infinity;
+        root.each(d => {
+          lx0 = Math.min(lx0, d.x); lx1 = Math.max(lx1, d.x);
+          ly0 = Math.min(ly0, d.y); ly1 = Math.max(ly1, d.y);
+        });
+
+        // Shift this subtree so its left edge starts at cursor
+        const offsetX = cursor - lx0;
+        root.each(d => { d.x += offsetX; });
+        cursor += (lx1 - lx0) + NS + GAP;
+
+        const links = root.links().map(link => {
+          const l = { ...link };
+          if (link.target.data.spouseHasOwnParents) l.connectToPrimary = true;
+          return l;
+        });
+
+        layouts.push({ root, links });
       });
 
-      // Only consider visible nodes (exclude invisible __root__)
-      const visibleNodes = root.descendants().filter(d => d.data.id !== '__root__');
+      // Build node positions map across all layouts
+      const nodePositions = {};
+      const allNodes = [];
+      const allLinks = [];
+      layouts.forEach(l => {
+        l.root.each(d => {
+          nodePositions[d.data.id] = { x: d.x, y: d.y, data: d.data };
+          if (d.data.spouseId) {
+            nodePositions[d.data.spouseId] = { x: d.x, y: d.y, data: d.data, isSpouse: true };
+          }
+          allNodes.push(d);
+        });
+        allLinks.push(...l.links);
+      });
 
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-      visibleNodes.forEach(d => {
-        x0 = Math.min(x0, d.x);
-        x1 = Math.max(x1, d.x);
-        y0 = Math.min(y0, d.y);
-        y1 = Math.max(y1, d.y);
+      allNodes.forEach(d => {
+        x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x);
+        y0 = Math.min(y0, d.y); y1 = Math.max(y1, d.y);
       });
 
       const pad = 80;
@@ -110,29 +138,26 @@
       const vx = x0 - CO - R - pad;
       const vy = y0 - R - pad;
 
-      const svg = d3.select('#tree-svg')
-        .attr('viewBox', `${vx} ${vy} ${W} ${H}`)
-        .attr('preserveAspectRatio', 'xMidYMid meet');
+      const svg = d3.select('#tree-svg');
 
       const defs = svg.append('defs');
       const f = defs.append('filter').attr('id', 'shadow').attr('x', '-30%').attr('y', '-30%').attr('width', '160%').attr('height', '160%');
       f.append('feDropShadow').attr('dx', 0).attr('dy', 2).attr('stdDeviation', 3).attr('flood-color', 'rgba(0,0,0,0.08)');
 
       const g = svg.append('g');
-      svg.call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform)));
 
-      // Process links: exclude links from invisible root, add connectToPrimary flags
-      const links = root.links()
-        .filter(link => link.source.data.id !== '__root__')
-        .map(link => {
-          const l = { ...link };
-          if (link.target.data.spouseHasOwnParents) {
-            l.connectToPrimary = true;
-          }
-          return l;
-        });
+      // Center the tree in the viewport at 1:1 scale
+      const svgEl = svg.node();
+      const vw = svgEl.clientWidth || window.innerWidth;
+      const vh = svgEl.clientHeight || window.innerHeight;
+      const cx = (x0 + x1) / 2;
+      const cy = (y0 + y1) / 2;
+      const initTransform = d3.zoomIdentity.translate(vw / 2 - cx, vh / 2 - cy);
 
-      g.append('g').selectAll('path').data(links).join('path')
+      const zoom = d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform));
+      svg.call(zoom).call(zoom.transform, initTransform);
+
+      g.append('g').selectAll('path').data(allLinks).join('path')
         .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2).attr('d', linkPath);
 
       // Draw merge links (spouse's parents → spouse circle in the couple node)
@@ -155,7 +180,7 @@
           .attr('d', `M${sx},${sy} V${my} H${tx} V${ty}`);
       });
 
-      g.append('g').selectAll('g').data(visibleNodes).join('g')
+      g.append('g').selectAll('g').data(allNodes).join('g')
         .attr('transform', d => `translate(${d.x},${d.y})`)
         .each(function(d) { drawNode(d3.select(this), d); });
     }
