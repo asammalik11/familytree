@@ -122,8 +122,11 @@
 
       const isChild = new Set(data.parentOf.map(p => p.child));
 
-      // Root = not a child and not already claimed as someone's spouse
+      // Pre-claim spouses of children so they don't appear as roots
       const claimed = new Set();
+      isChild.forEach(id => { if (spouseOf[id]) claimed.add(spouseOf[id]); });
+
+      // Root = not a child and not already claimed as someone's spouse
       const roots = data.nodes.filter(n => {
         if (isChild.has(n.id) || claimed.has(n.id)) return false;
         if (spouseOf[n.id]) claimed.add(spouseOf[n.id]);
