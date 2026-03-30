@@ -110,7 +110,9 @@
       const vx = x0 - CO - R - pad;
       const vy = y0 - R - pad;
 
-      const svg = d3.select('#tree-svg').attr('width', W).attr('height', H).attr('viewBox', `${vx} ${vy} ${W} ${H}`);
+      const svg = d3.select('#tree-svg')
+        .attr('viewBox', `${vx} ${vy} ${W} ${H}`)
+        .attr('preserveAspectRatio', 'xMidYMid meet');
 
       const defs = svg.append('defs');
       const f = defs.append('filter').attr('id', 'shadow').attr('x', '-30%').attr('y', '-30%').attr('width', '160%').attr('height', '160%');

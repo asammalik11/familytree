@@ -102,12 +102,13 @@ header a.back:hover { color: #3a58e0; }
 .tree-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .tree-canvas {
   flex: 1;
-  overflow: hidden;   /* D3 zoom/pan handles navigation */
+  overflow: hidden;
   cursor: grab;
 }
 
