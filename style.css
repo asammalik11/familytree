@@ -23,7 +23,7 @@ body {
 /* ── Header ───────────────────────────────────────────────── */
 header {
   background: var(--surface);
-  border-bottom: 1px solid var(--node-border);
+  border-bottom: 1px solid var(--border);
   padding: 18px 32px;
   display: flex;
   align-items: center;
@@ -78,7 +78,7 @@ header a.back:hover { color: #3a58e0; }
   align-items: center;
   gap: 14px;
   background: var(--surface);
-  border: 1px solid var(--node-border);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 36px 52px;
   box-shadow: var(--shadow);
@@ -115,10 +115,4 @@ header a.back:hover { color: #3a58e0; }
 
 #tree-svg { display: block; width: 100%; height: 100%; }
 
-/* ── Status ───────────────────────────────────────────────── */
-.status-msg {
-  color: var(--muted);
-  font-size: 1rem;
-  padding: 60px;
-  text-align: center;
-}
+

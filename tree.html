@@ -72,21 +72,43 @@
       const sy = d.source.y + R;
       const ty = d.target.y - R;
       const my = (sy + ty) / 2;
-      return `M${d.source.x},${sy} V${my} H${d.target.x} V${ty}`;
+      // Adjust target X if we need to connect to a specific person in a couple
+      let tx = d.target.x;
+      if (d.target.data.spouse && d.connectToPrimary) {
+        tx = d.target.x - CO; // Connect to primary (left circle)
+      }
+      return `M${d.source.x},${sy} V${my} H${tx} V${ty}`;
     }
 
-    function draw(rootData) {
+    function draw(rootData, mergeLinks = []) {
       const root = d3.hierarchy(rootData, d => d.children?.length ? d.children : null);
       d3.tree().nodeSize([NS, LH])(root);
 
-      let x0 = Infinity, x1 = -Infinity;
-      root.each(d => { x0 = Math.min(x0, d.x); x1 = Math.max(x1, d.x); });
+      // Build a map of node id to its position for merge links
+      const nodePositions = {};
+      root.each(d => { 
+        nodePositions[d.data.id] = { x: d.x, y: d.y, data: d.data };
+        if (d.data.spouseId) {
+          nodePositions[d.data.spouseId] = { x: d.x, y: d.y, data: d.data, isSpouse: true };
+        }
+      });
+
+      // Only consider visible nodes (exclude invisible __root__)
+      const visibleNodes = root.descendants().filter(d => d.data.id !== '__root__');
+
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      visibleNodes.forEach(d => {
+        x0 = Math.min(x0, d.x);
+        x1 = Math.max(x1, d.x);
+        y0 = Math.min(y0, d.y);
+        y1 = Math.max(y1, d.y);
+      });
 
       const pad = 80;
       const W = x1 - x0 + (CO + R) * 2 + pad * 2;
-      const H = (root.height + 1) * LH + pad * 2;
+      const H = y1 - y0 + R * 2 + pad * 2;
       const vx = x0 - CO - R - pad;
-      const vy = -R - pad;
+      const vy = y0 - R - pad;
 
       const svg = d3.select('#tree-svg').attr('width', W).attr('height', H).attr('viewBox', `${vx} ${vy} ${W} ${H}`);
 
@@ -97,10 +119,41 @@
       const g = svg.append('g');
       svg.call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', e => g.attr('transform', e.transform)));
 
-      g.append('g').selectAll('path').data(root.links()).join('path')
+      // Process links: exclude links from invisible root, add connectToPrimary flags
+      const links = root.links()
+        .filter(link => link.source.data.id !== '__root__')
+        .map(link => {
+          const l = { ...link };
+          if (link.target.data.spouseHasOwnParents) {
+            l.connectToPrimary = true;
+          }
+          return l;
+        });
+
+      g.append('g').selectAll('path').data(links).join('path')
         .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2).attr('d', linkPath);
 
-      g.append('g').selectAll('g').data(root.descendants()).join('g')
+      // Draw merge links (spouse's parents → spouse circle in the couple node)
+      mergeLinks.forEach(ml => {
+        const source = nodePositions[ml.sourceId];
+        const target = nodePositions[ml.targetPersonId];
+        if (!source || !target) return;
+
+        const sx = source.x;
+        const sy = source.y + R;
+
+        let tx = target.x;
+        if (target.isSpouse) tx += CO;
+        else if (target.data.spouse) tx -= CO;
+        const ty = target.y - R;
+
+        const my = (sy + ty) / 2;
+        g.append('path')
+          .attr('fill', 'none').attr('stroke', grey).attr('stroke-width', 2)
+          .attr('d', `M${sx},${sy} V${my} H${tx} V${ty}`);
+      });
+
+      g.append('g').selectAll('g').data(visibleNodes).join('g')
         .attr('transform', d => `translate(${d.x},${d.y})`)
         .each(function(d) { drawNode(d3.select(this), d); });
     }
@@ -120,33 +173,97 @@
         (childrenOf[key] ??= []).push(child);
       });
 
+      // Track who is a child (has parents)
       const isChild = new Set(data.parentOf.map(p => p.child));
 
+      // Identify couples where both members have parents (merge points)
+      // In such cases, the spouse's lineage is shown separately, not inlined
+      const bothHaveParents = new Set();
+      data.couples.forEach(({ a, b }) => {
+        if (isChild.has(a) && isChild.has(b)) {
+          bothHaveParents.add(a);
+          bothHaveParents.add(b);
+        }
+      });
+
       // Pre-claim spouses of children so they don't appear as roots
+      // But DON'T claim spouses who also have their own parents (they merge, not duplicate)
       const claimed = new Set();
-      isChild.forEach(id => { if (spouseOf[id]) claimed.add(spouseOf[id]); });
+      isChild.forEach(id => { 
+        const spouseId = spouseOf[id];
+        if (spouseId && !isChild.has(spouseId)) {
+          claimed.add(spouseId); 
+        }
+      });
 
       // Root = not a child and not already claimed as someone's spouse
       const roots = data.nodes.filter(n => {
         if (isChild.has(n.id) || claimed.has(n.id)) return false;
-        if (spouseOf[n.id]) claimed.add(spouseOf[n.id]);
+        const spouseId = spouseOf[n.id];
+        if (spouseId && !isChild.has(spouseId)) claimed.add(spouseId);
         return true;
       });
 
+      // Track which nodes we've built to avoid duplicates
+      const built = new Set();
+      const mergeLinks = [];
+
       function buildNode(id) {
+        if (built.has(id)) return null;
+        built.add(id);
+        
         const spouseId = spouseOf[id];
+        
+        // If spouse also has parents, they're part of same tree via merge
+        // Don't inline them as spouse - they appear via their own parent branch
+        // But they share children
+        const spouseHasOwnParents = spouseId && bothHaveParents.has(spouseId);
+        
+        // Mark spouse as built too (to prevent duplicate)
+        if (spouseId) built.add(spouseId);
+        
         const key = spouseId ? [id, spouseId].sort().join('+') : id;
+        const childIds = childrenOf[key] ?? [];
+        
+        // Build children, filtering out nulls (already built nodes)
+        const children = childIds.map(buildNode).filter(Boolean);
+        
         return {
           id,
           name: nodeMap[id].name,
           spouse: spouseId ? nodeMap[spouseId].name : null,
-          children: (childrenOf[key] ?? []).map(buildNode)
+          spouseId: spouseId || null,
+          spouseHasOwnParents,
+          children: children.length > 0 ? children : undefined
         };
       }
 
-      return roots.length === 1
-        ? buildNode(roots[0].id)
-        : { id: '__root__', name: null, children: roots.map(r => buildNode(r.id)) };
+      // For multi-root trees (like when both grandparent couples exist)
+      // we need to unify them under an invisible root
+      const rootNodes = [];
+      roots.forEach(r => {
+        const node = buildNode(r.id);
+        if (node) {
+          rootNodes.push(node);
+          // If this root has no children in the tree but should have,
+          // it means its child was already built via the other lineage.
+          // Create a merge link from this root to the child's circle.
+          if (!node.children) {
+            const spouseId = spouseOf[r.id];
+            const key = spouseId ? [r.id, spouseId].sort().join('+') : r.id;
+            const childIds = childrenOf[key] ?? [];
+            childIds.forEach(cid => {
+              mergeLinks.push({ sourceId: r.id, targetPersonId: cid });
+            });
+          }
+        }
+      });
+
+      const tree = rootNodes.length === 1
+        ? rootNodes[0]
+        : { id: '__root__', name: null, children: rootNodes };
+
+      return { tree, mergeLinks };
     }
 
     const family = new URLSearchParams(location.search).get('family');
@@ -155,7 +272,8 @@
       .then(data => {
         document.title = data.title;
         document.getElementById('page-title').textContent = data.title;
-        draw(parseGraph(data));
+        const { tree, mergeLinks } = parseGraph(data);
+        draw(tree, mergeLinks);
       });
   </script>
 
